@@ -5,7 +5,7 @@ use tui_textarea::{Input, TextArea};
 
 pub enum Mode {
     Browse,
-    Viewing { content: String },
+    Viewing { content: String, rendered: bool, scroll: u16 },
     AddStep1,
     AddStep2 { cat_typing: bool },
     AddStep3,
@@ -117,7 +117,7 @@ impl App {
                         (self.selected_category(), self.selected_entry())
                     {
                         let content = data::read_entry(cat, entry)?;
-                        self.mode = Mode::Viewing { content };
+                        self.mode = Mode::Viewing { content, rendered: true, scroll: 0 };
                     }
                 } else if !self.entries.is_empty() {
                     self.focus_right = true;
@@ -163,8 +163,44 @@ impl App {
     fn on_view(&mut self, key: KeyEvent) -> Result<bool> {
         match key.code {
             KeyCode::Char('q') | KeyCode::Esc => self.mode = Mode::Browse,
+            KeyCode::Tab => {
+                if let Mode::Viewing { ref mut rendered, ref mut scroll, .. } = self.mode {
+                    *rendered = !*rendered;
+                    *scroll = 0;
+                }
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = scroll.saturating_add(1);
+                }
+            }
+            KeyCode::Up | KeyCode::Char('k') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = scroll.saturating_sub(1);
+                }
+            }
+            KeyCode::Char('d') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = scroll.saturating_add(10);
+                }
+            }
+            KeyCode::Char('u') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = scroll.saturating_sub(10);
+                }
+            }
+            KeyCode::Char('g') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = 0;
+                }
+            }
+            KeyCode::Char('G') => {
+                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
+                    *scroll = u16::MAX;
+                }
+            }
             KeyCode::Char('y') => {
-                if let Mode::Viewing { ref content } = self.mode {
+                if let Mode::Viewing { ref content, .. } = self.mode {
                     let text = content.clone();
                     match arboard::Clipboard::new().and_then(|mut c| c.set_text(&text)) {
                         Ok(_) => self.message = Some("✓ 已复制到剪贴板".into()),

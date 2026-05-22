@@ -1,10 +1,8 @@
 use anyhow::Result;
 use std::{fs, path::PathBuf};
 
-const EXCLUDED: &[&str] = &["src", "target", ".git"];
-
 pub fn skills_dir() -> PathBuf {
-    dirs::home_dir().unwrap_or_default().join("skills")
+    dirs::home_dir().unwrap_or_default().join("skills").join("data")
 }
 
 pub fn categories() -> Vec<String> {
@@ -14,7 +12,6 @@ pub fn categories() -> Vec<String> {
             let name = entry.file_name().to_string_lossy().to_string();
             if entry.file_type().map(|t| t.is_dir()).unwrap_or(false)
                 && !name.starts_with('.')
-                && !EXCLUDED.contains(&name.as_str())
             {
                 cats.push(name);
             }
@@ -30,9 +27,9 @@ pub fn entries(category: &str) -> Vec<String> {
         for entry in rd.flatten() {
             let name = entry.file_name().to_string_lossy().to_string();
             if entry.file_type().map(|t| t.is_file()).unwrap_or(false)
-                && !name.starts_with('.')
+                && name.ends_with(".md")
             {
-                entries.push(name);
+                entries.push(name.trim_end_matches(".md").to_string());
             }
         }
     }
@@ -41,17 +38,17 @@ pub fn entries(category: &str) -> Vec<String> {
 }
 
 pub fn read_entry(category: &str, name: &str) -> Result<String> {
-    Ok(fs::read_to_string(skills_dir().join(category).join(name))?)
+    Ok(fs::read_to_string(skills_dir().join(category).join(format!("{name}.md")))?)
 }
 
 pub fn save_entry(category: &str, name: &str, content: &str) -> Result<()> {
     let dir = skills_dir().join(category);
     fs::create_dir_all(&dir)?;
-    fs::write(dir.join(name), content)?;
+    fs::write(dir.join(format!("{name}.md")), content)?;
     Ok(())
 }
 
 pub fn delete_entry(category: &str, name: &str) -> Result<()> {
-    fs::remove_file(skills_dir().join(category).join(name))?;
+    fs::remove_file(skills_dir().join(category).join(format!("{name}.md")))?;
     Ok(())
 }

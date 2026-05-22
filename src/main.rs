@@ -9,6 +9,7 @@ use std::io;
 
 mod app;
 mod data;
+mod md;
 mod ui;
 
 use app::App;

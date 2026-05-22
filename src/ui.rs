@@ -1,7 +1,9 @@
 use crate::app::{App, Mode};
+use crate::md;
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
+    text::Text,
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
     Frame,
 };
@@ -110,27 +112,41 @@ fn draw_view(f: &mut Frame, app: &App) {
     let [main, bar] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(area);
 
-    let content = match &app.mode {
-        Mode::Viewing { content } => content.as_str(),
-        _ => "",
+    let (content, rendered, scroll) = match &app.mode {
+        Mode::Viewing { content, rendered, scroll } => (content.as_str(), *rendered, *scroll),
+        _ => ("", false, 0),
     };
+    let mode_tag = if rendered { "MD" } else { "原始" };
     let title = match (app.selected_category(), app.selected_entry()) {
-        (Some(cat), Some(entry)) => format!(" {cat}/{entry} "),
-        _ => " 查看 ".into(),
+        (Some(cat), Some(entry)) => format!(" {cat}/{entry}  [{mode_tag}] "),
+        _ => format!(" 查看  [{mode_tag}] "),
     };
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    if rendered {
+        let text = Text::from(md::render(content));
+        f.render_widget(
+            Paragraph::new(text)
+                .block(block)
+                .wrap(Wrap { trim: false })
+                .scroll((scroll, 0)),
+            main,
+        );
+    } else {
+        f.render_widget(
+            Paragraph::new(content)
+                .block(block)
+                .wrap(Wrap { trim: false })
+                .scroll((scroll, 0)),
+            main,
+        );
+    }
+
     f.render_widget(
-        Paragraph::new(content)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title)
-                    .border_style(Style::default().fg(Color::Cyan)),
-            )
-            .wrap(Wrap { trim: false }),
-        main,
-    );
-    f.render_widget(
-        Paragraph::new(" y:复制到剪贴板  q/Esc:返回")
+        Paragraph::new(" j/k:滚动  d/u:翻页  g/G:首/尾  Tab:切换渲染  y:复制  q:返回")
             .style(Style::default().fg(Color::DarkGray)),
         bar,
     );
