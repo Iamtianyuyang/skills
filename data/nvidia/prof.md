@@ -1,1 +1,0 @@
-Use Nsight Systems for profiling system performance and Nsight Compute for kernel profiling.

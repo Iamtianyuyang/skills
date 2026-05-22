@@ -36,6 +36,9 @@ pub struct App {
 
     // transient status message
     pub message: Option<String>,
+
+    // updated each frame by draw_view so G can scroll to exact bottom
+    pub view_height: u16,
 }
 
 impl App {
@@ -58,6 +61,7 @@ impl App {
             add_name: String::new(),
             del_target: None,
             message: None,
+            view_height: 0,
         })
     }
 
@@ -195,20 +199,16 @@ impl App {
                 }
             }
             KeyCode::Char('G') => {
-                if let Mode::Viewing { ref mut scroll, .. } = self.mode {
-                    *scroll = u16::MAX;
+                if let Mode::Viewing { ref content, ref rendered, ref mut scroll, .. } = self.mode {
+                    let total_lines = if *rendered {
+                        crate::md::render(content).len() as u16
+                    } else {
+                        content.lines().count() as u16
+                    };
+                    *scroll = total_lines.saturating_sub(self.view_height);
                 }
             }
-            KeyCode::Char('y') => {
-                if let Mode::Viewing { ref content, .. } = self.mode {
-                    let text = content.clone();
-                    match arboard::Clipboard::new().and_then(|mut c| c.set_text(&text)) {
-                        Ok(_) => self.message = Some("✓ 已复制到剪贴板".into()),
-                        Err(e) => self.message = Some(format!("复制失败: {e}")),
-                    }
-                }
-            }
-            _ => {}
+_ => {}
         }
         Ok(false)
     }

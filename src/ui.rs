@@ -17,7 +17,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let is_confirm = matches!(app.mode, Mode::ConfirmDelete);
 
     if is_browse { draw_browse(f, app); }
-    if is_viewing { draw_view(f, app); }
+    if is_viewing { draw_view(f, app); }  // draw_view takes &mut App to write view_height
     if is_step1 { draw_step1(f, app); }
     if is_step2 { draw_step2(f, app); }
     if is_step3 { draw_step3(f, app); }
@@ -107,10 +107,12 @@ fn draw_browse(f: &mut Frame, app: &App) {
 
 // ── View ──────────────────────────────────────────────────────────────────────
 
-fn draw_view(f: &mut Frame, app: &App) {
+fn draw_view(f: &mut Frame, app: &mut App) {
     let area = f.area();
     let [main, bar] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(1)]).areas(area);
+
+    app.view_height = main.height.saturating_sub(2); // minus top+bottom border
 
     let (content, rendered, scroll) = match &app.mode {
         Mode::Viewing { content, rendered, scroll } => (content.as_str(), *rendered, *scroll),
@@ -146,7 +148,7 @@ fn draw_view(f: &mut Frame, app: &App) {
     }
 
     f.render_widget(
-        Paragraph::new(" j/k:滚动  d/u:翻页  g/G:首/尾  Tab:切换渲染  y:复制  q:返回")
+        Paragraph::new(" j/k:滚动  d/u:翻页  g/G:首/尾  Tab:切换渲染  q:返回")
             .style(Style::default().fg(Color::DarkGray)),
         bar,
     );
